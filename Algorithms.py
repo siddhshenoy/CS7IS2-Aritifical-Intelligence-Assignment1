@@ -239,25 +239,19 @@ class MDPVI(Solver, BaseMDP):
     def __init__(self) -> None:
         super().__init__()
         self.Metrics[MDPMetrics.Reward] = -10
-        self.Metrics[MDPMetrics.Discount] = 0.9
+        self.Metrics[MDPMetrics.Discount] = 0.5
         self.Metrics[MDPMetrics.MaximumError] = 0.001
+        self.pvalues = {"N" : 1, "W" : 1, "S": 1, "E": 1}
+
+    def AssignStochasticValues(self):
+        for key, value in self.ActionList.items():
+            for k, v in value.items():
+                value[k] = self.pvalues[k]
 
     def GenerateActionLists(self, maze):
         for n, d in maze.maze_map.items():
             self.ActionList[n] = dict([(k, v) for k,v in d.items() if v == 1])
-        #print("Action List:", self.ActionList)
-        #print("Action List items:")
-        #print(self.ActionList.items())
-        for key, value in self.ActionList.items():
-            for k, v in value.items():
-                if k == 'N':
-                    value[k] = 1
-                elif k == 'W':
-                    value[k] = 1
-                elif k == 'E':
-                    value[k] = 1
-                elif k == 'S':
-                    value[k] = 1
+        self.AssignStochasticValues()
     
     def GenerateUtilityValues(self):
         self.UtilityValues = {a: 0 for a in self.ActionList.keys()}
@@ -266,28 +260,27 @@ class MDPVI(Solver, BaseMDP):
         self.UtilityValues[goal_node] = 1
         for i in range(0, 1):
             while True:
-                Delta = 0
+                d = 0
                 for state in self.ActionList.keys():
                     if state == goal_node:
                         continue
-                    max_utility = float("-inf")
-                    for action, prob in self.ActionList[state].items():
+                    _mu = float("-inf")
+                    for action, p in self.ActionList[state].items():
                         for direction in action:
                             if maze.maze_map[state][direction] == True:
-                                next_state = self.GetNextNode(state, direction)
-                            # utility = 0
-                        reward = -1 #* self.GetNextStateReward(maze, next_state, goal_node)
-                        #self.Metrics[MDPMetrics.Reward]
-                        #print("reward = " +str(reward))
-                        if next_state == goal_node:
-                            reward = 100000
-                        utility =   (reward + prob * self.Metrics[MDPMetrics.Discount] * self.UtilityValues[next_state])
-                        if utility > max_utility:
-                            max_utility = utility
-                    Delta = max(Delta, abs(max_utility - self.UtilityValues[state]))
-                    self.UtilityValues[state] = max_utility
-                if Delta < self.Metrics[MDPMetrics.MaximumError]:
+                                _ns = self.GetNextNode(state, direction)
+                        reward = self.Metrics[MDPMetrics.Reward]
+                        if _ns == goal_node:
+                            reward = 10000
+                        _u = (reward + p * self.Metrics[MDPMetrics.Discount] * self.UtilityValues[_ns])
+                        if _u > _mu:
+                            _mu = _u
+                    d = self.ReCalculateDel(state, d, _mu)
+                    self.UtilityValues[state] = _mu
+                if d < self.Metrics[MDPMetrics.MaximumError]:
                     break 
+    def ReCalculateDel(self, state, old_d, mu):
+        return max(old_d, abs(mu - self.UtilityValues[state]))
     def GetNextStateReward(self, maze, state, goal):
         total_outlets = 0
         state_outlets = 0
@@ -299,29 +292,33 @@ class MDPVI(Solver, BaseMDP):
     def TracePath(self, currentNode, maze, goal_node):
         node = currentNode
         self.ExploredList.append(currentNode)
-        while True:
-            bestNode = None
-            bestNodeVal = None
-            if node == goal_node:
+        should_exit = False
+        while True and should_exit == False:
+            node_data = {
+                "BN" : None, "BNV" : None
+            }
+            if node != goal_node:
+                for direction in self.DirectionList:
+                    if maze.maze_map[node][direction] == True and self.GetNextNode(node, direction) not in self.ExploredList:
+                        _next_node = self.GetNextNode(node, direction)
+                        if _next_node != goal_node:
+                            if node_data["BNV"] == None:
+                                node_data["BN"] = _next_node
+                                node_data["BNV"] = self.UtilityValues[node_data["BN"]]
+                            else:
+                                temp = _next_node
+                                if node_data["BNV"] < self.UtilityValues[temp]:
+                                    node_data["BN"] = temp
+                                    node_data["BNV"] = self.UtilityValues[temp]               
+                        else:
+                            node_data["BN"] = _next_node
+                            node_data["BNV"] = self.UtilityValues[node_data["BN"]]
+                            should_exit = True
+                self.ExploredList.append(node_data["BN"])
+                self.FinalPath[node] = node_data["BN"]
+                node = node_data["BN"]
+            else:
                 break
-            for direction in 'NWES':
-                if maze.maze_map[node][direction] == True and self.GetNextNode(node, direction) not in self.ExploredList:
-                    directionalNode = self.GetNextNode(node, direction)
-                    if directionalNode == goal_node:
-                        bestNode = directionalNode
-                        bestNodeVal = self.UtilityValues[bestNode]
-                        break
-                    if bestNodeVal == None:
-                        bestNode = directionalNode
-                        bestNodeVal = self.UtilityValues[bestNode]
-                    else:
-                        tempNode = directionalNode
-                        if bestNodeVal < self.UtilityValues[tempNode]:
-                            bestNode = tempNode
-                            bestNodeVal = self.UtilityValues[tempNode]               
-            self.ExploredList.append(bestNode)
-            self.FinalPath[node] = bestNode
-            node = bestNode
     def Solve(self, maze, goal_path):
         self.GenerateActionLists(maze)
         self.GenerateUtilityValues()
@@ -335,9 +332,10 @@ class MDPPI(Solver, BaseMDP):
     def __init__(self) -> None:
         super().__init__()
         self.Metrics[MDPMetrics.Reward] = -10
-        self.Metrics[MDPMetrics.Discount] = 0.9
+        self.Metrics[MDPMetrics.Discount] = 0.2
         self.Metrics[MDPMetrics.MaximumError] = 0.001
         self.pvalues = {"N" : 1, "W" : 1, "S": 1, "E": 1}
+        
     def AssignStochasticValues(self):
         for key, value in self.ActionList.items():
             for k, v in value.items():
@@ -346,9 +344,8 @@ class MDPPI(Solver, BaseMDP):
         for n, d in maze.maze_map.items():
             self.ActionList[n] = dict([(k, v) for k,v in d.items() if v == 1])
         self.AssignStochasticValues()
-        #r = random.random() * maze.rows * maze.cols + 1
-        self.RewardList = {state: -50 for state in self.ActionList.keys()}
-        self.PolicyList = {state: random.choice(self.DirectionList) for state in self.ActionList.keys()}
+        self.RewardList = {state: -25 for state in self.ActionList.keys()}
+        self.PolicyList = {state: 'E' for state in self.ActionList.keys()}
     
     def GenerateUtilityValues(self):
         self.UtilityValues = {a: 0 for a in self.ActionList.keys()}
@@ -356,36 +353,31 @@ class MDPPI(Solver, BaseMDP):
     def Iterate(self, maze, goal_node):
         self.UtilityValues[goal_node] = 10**(8)
         self.RewardList[goal_node] = 10**(8)
-        is_policy_changed = True
-        iterations = 0
-        while is_policy_changed:
-            is_policy_changed = False
-            is_value_changed = True
-            while is_value_changed:
-                is_value_changed = False
-                for state in self.ActionList.keys():
-                    if state == goal_node:
-                        continue
-                    max_utility = float("-inf")
-                    max_action = None
-                    for action, prob in self.ActionList[state].items():
+        policy_update = True
+        while policy_update:
+            policy_update = False
+            for _s in self.ActionList.keys():
+                if _s != goal_node:
+                    _mu,_act = float("-inf"), None
+                    for action, prob in self.ActionList[_s].items():
                         for direction in action:
-                            if maze.maze_map[state][direction] == True:
-                                next_state = self.GetNextNode(state, direction)
+                            if maze.maze_map[_s][direction] == True:
+                                next_state = self.GetNextNode(_s, direction)
 
-                        reward = self.RewardList[state]
+                        reward = self.RewardList[_s]
                         if next_state == goal_node:
                             reward = 10**(100)
-
-                        utility = reward + self.Metrics[MDPMetrics.Discount] * (prob * self.UtilityValues[next_state])
-                        if utility > max_utility:
-                            max_utility = utility
-                            max_action = action
-                        self.PolicyList[state] = max_action
-                        self.UtilityValues[state] = max_utility
-                        if self.PolicyList[state] != max_action:
-                            is_policy_changed = True
-                            self.PolicyList[state] = max_action
+                        _u = reward + self.Metrics[MDPMetrics.Discount] * (prob * self.UtilityValues[next_state])
+                        if _u > _mu:
+                            _mu = _u
+                            _act = action
+                        self.PolicyList[_s] = _act
+                        self.UtilityValues[_s] = _mu
+                        if self.PolicyList[_s] != _act:
+                            policy_update = True
+                            self.PolicyList[_s] = _act
+                else:
+                    continue
 
     def TracePath(self, currentNode, maze, goal_node):
         _n = currentNode
@@ -393,7 +385,6 @@ class MDPPI(Solver, BaseMDP):
             _nn = self.GetNextNode(_n, self.PolicyList[_n])
             self.FinalPath[_n] = _nn
             _n = _nn
-            print(_n)
 
     def Solve(self, maze, goal_path):
         self.GenerateActionLists(maze)

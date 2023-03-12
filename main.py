@@ -23,13 +23,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser( prog='MazeSolver',
                         description='Solves mazes using different algorithm',
                         epilog='For assignment-1 - AI')
-    parser.add_argument('-g', '--generate')
     parser.add_argument('-sx', '--sizex')
     parser.add_argument('-sy', '--sizey')
     parser.add_argument('-tx', '--targetx')
     parser.add_argument('-ty', '--targety')
-    parser.add_argument('-snx', '--startnodex')
-    parser.add_argument('-sny', '--startnodey')
     parser.add_argument('-del', '--delay')
     parser.add_argument('-savemaze', '--savemaze')
     parser.add_argument('-loadmaze', '--loadmaze')
@@ -112,12 +109,9 @@ if __name__ == "__main__":
             FinalList.append(solver_name)
     else:
         solver_list_args = ProgramMetrics["Maze"]["Solver"].split(",")
-        print(" Args " ,solver_list_args)
         for solver in solver_list_args:
             FinalList.append(solver)
-    print( "Final List" , FinalList)
     if "BFS" in FinalList:
-        print("Adding BFS")
         FinalMaze.AddSolver(BFSSolver)
     if "DFS" in FinalList:
         FinalMaze.AddSolver(DFSSolver)
@@ -133,6 +127,8 @@ if __name__ == "__main__":
     except KeyError:
         print("Key Error")
         # FinalMaze.PlotSolvedMaze()
+    print("=" * 50)
+    print("Abbreviations: TD - Time Difference, PL - Path Length, SPL - Search Path Length")
     if "BFS" in FinalList:
         FinalMaze.AddLabel(f"BFS TD: ",      round(BFSSolver.GetTimeDifference(), 3))
         FinalMaze.AddLabel(f"BFS PL: ",       BFSSolver.GetFinalPathLength()) 
@@ -154,7 +150,7 @@ if __name__ == "__main__":
     if "MDPPI" in FinalList:
         FinalMaze.AddLabel(f"MDP-PI TD: ",   round(MDPPIInstance.GetTimeDifference(), 3))
         FinalMaze.AddLabel(f"MDP-PI PL: ",    MDPPIInstance.GetFinalPathLength()) 
-
+    print("=" * 50)
     FinalMaze.Run()
     
     """
@@ -162,10 +158,11 @@ if __name__ == "__main__":
     """
     # Plot the time bar graph
     if ProgramMetrics["Maze"]["Solver"] == "All":
-        Algorithms = ["BFS", "DFS", "A-Star", "MDP(VI)", "MDP(PI)"]
+        Algorithms = ["BFS", "DFS", "A-Star (Manhattan)", "A-Star (Euclidean)", "MDP(VI)", "MDP(PI)"]
         Values = [
             round(BFSSolver.GetTimeDifference(), 3),
             round(DFSSolver.GetTimeDifference(), 3),
+            round(AStarSolverManhattan.GetTimeDifference(), 3),
             round(AStarSolver.GetTimeDifference(), 3),
             round(MDPVIInstance.GetTimeDifference(), 3),
             round(MDPPIInstance.GetTimeDifference(), 3)
@@ -184,6 +181,7 @@ if __name__ == "__main__":
         Values = [
             BFSSolver.GetFinalPathLength(),
             DFSSolver.GetFinalPathLength(), 
+            AStarSolverManhattan.GetFinalPathLength(),
             AStarSolver.GetFinalPathLength(),
             MDPVIInstance.GetFinalPathLength(), 
             MDPPIInstance.GetFinalPathLength()
