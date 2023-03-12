@@ -6,6 +6,14 @@
 3. Maze.py - Contains class to Maze which initializes and defines the maze for our program.
 4. main.py - The main program
 
+#### Saved mazes:
+1. `./SavedMazes/maze--5x5.csv`
+2. `./SavedMazes/maze--10x10.csv`
+3. `./SavedMazes/maze--20x20.csv`
+4. `./SavedMazes/maze--25x25.csv`
+5. `./SavedMazes/maze--40x40.csv`
+6. `./SavedMazes/maze--50x50.csv`
+7. `./SavedMazes/maze--60x60.csv`
 
 #### Libraries used:
 1. Pyamaze `(pip install pyamaze)`
