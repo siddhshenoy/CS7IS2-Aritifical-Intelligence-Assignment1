@@ -6,12 +6,13 @@
 3. Maze.py - Contains class to Maze which initializes and defines the maze for our program.
 4. main.py - The main program
 
+
 #### Libraries used:
-1. Pyamaze
-2. Matplotlib
+1. Pyamaze `(pip install pyamaze)`
+2. Matplotlib `(pip install matplotlib)`
 
 ##### Command to run the code:
-```python main.py -sx [sizex] -sy [sizey] -tx [targetx] -ty [targety] -del [delta] -loadmaze [mazename] -solver [solvername] -savemaze [mazename]```
+`python main.py -sx [sizex] -sy [sizey] -tx [targetx] -ty [targety] -del [delta] -loadmaze [mazename] -solver [solvername] -savemaze [mazename]`
 
 ##### Parameters:
 1. sizex, sizey - Size of the maze in integers
